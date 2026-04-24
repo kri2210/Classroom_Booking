@@ -1,0 +1,19 @@
+# General Requirements
+Node.js >= 18.x
+npm >= 8.x
+
+# Backend Dependencies (see backend/package.json for exact versions)
+@supabase/supabase-js
+cors
+dotenv
+express
+multer
+exceljs
+nodemon (dev)
+
+# Frontend Dependencies (see frontend/package.json for exact versions)
+react
+react-dom
+@supabase/supabase-js
+@vitejs/plugin-react (dev)
+vite (dev)
