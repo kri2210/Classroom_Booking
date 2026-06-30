@@ -1,24 +1,12 @@
 import { CLASSROOM_TIME_SLOTS, LAB_TIME_SLOTS, DAYS_OF_WEEK } from '../lib/constants';
+import { isBookingCompleted, isSlotStartPast } from '../lib/bookingTime';
 
 function getDayOfWeek(dateStr) {
   return DAYS_OF_WEEK[new Date(dateStr).getUTCDay()];
 }
 
-function isSlotPast(dateStr, slotStart) {
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  if (dateStr < today) return true;
-  if (dateStr > today) return false;
-  const [sh, sm] = slotStart.split(':').map(Number);
-  return now.getHours() * 60 + now.getMinutes() >= sh * 60 + sm;
-}
-
 function getSlotStatus(room, slot, selectedDate, bookings, timetableEntries) {
   if (!selectedDate) return { status: 'loading', label: 'Loading…' };
-
-  // 1. Past
-  if (isSlotPast(selectedDate, slot.start))
-    return { status: 'expired', label: 'Time Passed' };
 
   const dayOfWeek = getDayOfWeek(selectedDate);
 
@@ -45,9 +33,13 @@ function getSlotStatus(room, slot, selectedDate, bookings, timetableEntries) {
     b.endTime === slot.end
   );
   if (bk) {
+    if (isBookingCompleted(bk)) return { status: 'completed', label: 'Completed' };
     if (bk.status === 'confirmed') return { status: 'booked',  label: `Booked: ${bk.facultyName}` };
     if (bk.status === 'pending')   return { status: 'pending', label: 'Pending Approval' };
   }
+
+  if (isSlotStartPast(selectedDate, slot.start))
+    return { status: 'expired', label: 'Time Passed' };
 
   return { status: 'available', label: 'Available' };
 }
@@ -57,6 +49,7 @@ const STATUS_CLASS = {
   fixed:     'slot-btn slot-fixed',
   booked:    'slot-btn slot-booked',
   pending:   'slot-btn slot-pending',
+  completed: 'slot-btn slot-expired',
   expired:   'slot-btn slot-expired',
   loading:   'slot-btn slot-expired',
 };

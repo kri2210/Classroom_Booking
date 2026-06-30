@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { deleteBooking } from '../lib/api';
+import { isBookingCompleted } from '../lib/bookingTime';
 
 export default function MyBookingsPage({ user, bookings, onRefresh, showToast, onBack }) {
   const [confirmCancel, setConfirmCancel] = useState(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const myBookings = bookings.filter(b =>
     b.requestedBy?.toLowerCase() === user.email.toLowerCase()
@@ -29,9 +36,16 @@ export default function MyBookingsPage({ user, bookings, onRefresh, showToast, o
 
   // Status color helper
   function statusStyle(status) {
+    if (status === 'completed') return { background: '#e2e8f0', color: '#334155' };
     if (status === 'confirmed') return { background: '#d1fae5', color: '#065f46' };
     if (status === 'pending')   return { background: '#fef3c7', color: '#92400e' };
     return { background: '#1e293b', color: '#475569' };
+  }
+
+  function statusLabel(status) {
+    if (status === 'completed') return 'Completed';
+    if (status === 'confirmed') return 'Confirmed';
+    return 'Pending';
   }
 
   return (
@@ -67,7 +81,9 @@ export default function MyBookingsPage({ user, bookings, onRefresh, showToast, o
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
-          {myBookings.map(b => (
+          {myBookings.map(b => {
+            const displayStatus = isBookingCompleted(b, now) ? 'completed' : b.status;
+            return (
             <div
               key={b.id}
               className="card animate-in"
@@ -76,7 +92,9 @@ export default function MyBookingsPage({ user, bookings, onRefresh, showToast, o
               {/* Card top strip (status color) */}
               <div style={{
                 height: '5px',
-                background: b.status === 'confirmed'
+                background: displayStatus === 'completed'
+                  ? 'linear-gradient(90deg,#94a3b8,#64748b)'
+                  : displayStatus === 'confirmed'
                   ? 'linear-gradient(90deg,#10b981,#059669)'
                   : 'linear-gradient(90deg,#f59e0b,#d97706)',
               }} />
@@ -90,7 +108,7 @@ export default function MyBookingsPage({ user, bookings, onRefresh, showToast, o
                     </div>
                   </div>
                   <span style={{
-                    ...statusStyle(b.status),
+                    ...statusStyle(displayStatus),
                     padding: '.25rem .85rem',
                     borderRadius: '999px',
                     fontSize: '.75rem',
@@ -99,7 +117,7 @@ export default function MyBookingsPage({ user, bookings, onRefresh, showToast, o
                     flexShrink: 0,
                     marginLeft: '.5rem',
                   }}>
-                    {b.status === 'confirmed' ? '✓ Confirmed' : '⏳ Pending'}
+                    {statusLabel(displayStatus)}
                   </span>
                 </div>
 
@@ -143,7 +161,11 @@ export default function MyBookingsPage({ user, bookings, onRefresh, showToast, o
 
                 {/* Cancel action */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '.5rem' }}>
-                  {confirmCancel === b.id ? (
+                  {displayStatus === 'completed' ? (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '.82rem', fontWeight: 700 }}>
+                      This booking is completed.
+                    </span>
+                  ) : confirmCancel === b.id ? (
                     <>
                       <button className="btn btn-secondary btn-sm" onClick={() => setConfirmCancel(null)}>No, Keep</button>
                       <button className="btn btn-danger btn-sm" onClick={() => handleCancelBooking(b.id)}>Yes, Cancel</button>
@@ -156,7 +178,8 @@ export default function MyBookingsPage({ user, bookings, onRefresh, showToast, o
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
